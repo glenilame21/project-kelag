@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class MonteL_PL:
     @staticmethod
     async def random_sleep(min_seconds=1, max_seconds=4):
-        """Pause execution for a random duration between min_seconds and max_seconds."""
+        """Pause execution for a random duration between min_seconds and max_seconds"""
         sleep_duration = random.uniform(min_seconds, max_seconds)
         logger.info(f"Pausing for {sleep_duration:.2f} seconds...")
         await asyncio.sleep(sleep_duration)
@@ -140,6 +140,7 @@ class MonteL_PL:
                 continue
 
         # Batch insert into database
+        # this is not the most ideal way to save such data but it's what we are working with
         if data_to_insert:
             try:
                 with pyodbc.connect(
@@ -163,6 +164,9 @@ class MonteL_PL:
         # Update titles file
         with open(titles_file_path, 'w', encoding='utf-8') as file:
             json.dump(existing_titles, file, indent=4)
+
+#important, your first iteration might fail because of the cookies that need to be loaded
+#also make sure to create an account so that you have a username and password and place them in your .env file
 
 async def authenticate_user(page, context):
     USERNAME = os.getenv('MONTEL_USERNAME')
@@ -214,9 +218,12 @@ async def main():
         await authenticate_user(page, context)
 
         # Scraping execution
+        # if you want to run this on your machine make sure to change the download directory to your local directory
+        # this is important because the titles are saved here and avoid inserting duplicate news
         download_dir = os.getenv('DOWNLOAD_DIR', "C:/Users/Z_LAME/Desktop/Crawler/Downloads/MontelPlaywright")
         os.makedirs(download_dir, exist_ok=True)
-
+        
+        # change this to your local directory too! you will find the urls.json in the same folder on GitHub
         with open("C:/Users/Z_LAME/Desktop/Crawler/news-crawler/Montel/urls.json") as f:
             urls = json.load(f)['urls']
 
