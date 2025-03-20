@@ -27,15 +27,15 @@ This project is a web scraper for Montel News built with [Playwright](https://pl
 
 
 
-Prepare the .env file:
+## Prepare the .env file:
 
-Create a .env file in the project directory with the following variables:
+### Create a .env file in the project directory with the following variables:
 
 
-MONTEL_USERNAME=your_username
-PASSWORD=your_password
-COOKIE_FILE=path/to/your/cookie_file.json
-DOWNLOAD_DIR=your/download/directory
+* MONTEL_USERNAME=your_username
+* PASSWORD=your_password
+* COOKIE_FILE=path/to/your/cookie_file.json
+* DOWNLOAD_DIR=your/download/directory
 
 
 Ensure the urls.json file exists:
