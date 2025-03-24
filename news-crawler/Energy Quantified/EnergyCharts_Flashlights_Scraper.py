@@ -134,7 +134,7 @@ def save_to_database(articles):
                         "",  # Empty subtitle
                         article["body"],
                         article["date"],
-                        "Strom",  # Category not available here
+                        "CO2",  # Category not available here
                         article["source"]
                     )
                 )
