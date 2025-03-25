@@ -1,157 +1,122 @@
 import requests
+from datetime import datetime
+from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
 from datetime import datetime
-import pyodbc
+import os
 import json
 import urllib3
-from pathlib import Path
-from typing import List, Dict
+import pyodbc
 
-# Disable SSL warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-# Configuration
-CONFIG_PATH = "C:/Users/Z_LAME/Desktop/Crawler/news-crawler/Energy Quantified/config.json"
 DB_CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    'SERVER=SQLBI01;'
-    'DATABASE=DH_SANDBOX;'
-    'Trusted_Connection=yes;'
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=SQLBI01;"
+    "DATABASE=DH_SANDBOX;"
+    "Trusted_Connection=yes;"
 )
-TARGET_URL = 'https://energycharts.enerchase.de/energycharts/energycharts---co2-marktbericht'
-TRACKER_PATH = "C:/Users/Z_LAME/Desktop/Crawler/Downloads/Energy Quantified/titles_tracker.json"
-SOURCE = 'Energy Quantified'
 
-# Ensure download directory exists
-Path(TRACKER_PATH).parent.mkdir(parents=True, exist_ok=True)
 
-def load_config() -> Dict:
-    """Load login credentials from config file"""
-    with open(CONFIG_PATH) as config_file:
-        return json.load(config_file)
+# Connect to SQL Server
+conn = pyodbc.connect(DB_CONNECTION_STRING)
+cursor = conn.cursor()
 
-def parse_date(date_str: str) -> datetime:
-    """Convert date string to datetime object"""
-    try:
-        return datetime.strptime(date_str, '%Y-%m-%d %I:%M %p')
-    except ValueError as e:
-        print(f"Date parsing error: {e}")
-        return None
-
-def scrape_articles(session: requests.Session) -> List[Dict]:
-    """Scrape articles from Flashlights page"""
-    response = session.get(TARGET_URL, verify=False)
-    soup = BeautifulSoup(response.text, 'lxml')
-
-    # Extract elements
-    titles = [h2.text.strip() for h2 in soup.find_all('h2', class_='f-heading-detail-small')]
-    categories = [cat.text.strip() for cat in soup.find_all('div', class_='fl_tag')]
-    date_strings = [date.text.strip() for date in soup.find_all('div', class_='date')]
-    bodies = [body.text.strip() for body in soup.find_all('div', class_='w-richtext')]
-
-    # Validate and pair data
-    min_length = min(len(titles), len(categories), len(date_strings), len(bodies))
-    articles = []
-    
-    for i in range(min_length):
-        parsed_date = parse_date(date_strings[i])
-        if parsed_date:
-            articles.append({
-                'title': titles[i],
-                'category': categories[i],
-                'date': parsed_date,
-                'body': bodies[i],
-                'source': SOURCE
-            })
-    
-    return articles
-
-def save_to_database(articles: List[Dict]):
-    """Save articles to database and update title tracker"""
-    try:
-        # Load existing tracked titles
-        try:
-            with open(TRACKER_PATH, 'r', encoding='utf-8') as f:
-                tracked_titles = set(json.load(f))
-        except FileNotFoundError:
-            tracked_titles = set()
-
-        # Filter new articles
-        new_articles = [a for a in articles if a['title'] not in tracked_titles]
-        if not new_articles:
-            print("No new articles to insert.")
-            return
-
-        conn = pyodbc.connect(DB_CONNECTION_STRING)
-        cursor = conn.cursor()
-
-        # Check database for existing titles
-        cursor.execute("SELECT title FROM mercurius.DT_SCRAPER WHERE source = ?", SOURCE)
-        db_titles = {row[0] for row in cursor.fetchall()}
-
-        # Prepare insert statement
-        insert_sql = """
+insert_sql = """
             INSERT INTO mercurius.DT_SCRAPER 
             (title, subtitle, body, datetime, category, source)
             VALUES (?, ?, ?, ?, ?, ?)
         """
 
-        # Insert new articles
-        inserted_titles = []
-        for article in new_articles:
-            if article['title'] not in db_titles:
-                try:
-                    cursor.execute(insert_sql, (
-                        article['title'],
-                        '',  # Empty subtitle
-                        article['body'],
-                        article['date'],
-                        article['category'],
-                        article['source']
-                    ))
-                    inserted_titles.append(article['title'])
-                    print(f"Saved: {article['title']}")
-                except pyodbc.IntegrityError:
-                    print(f"Duplicate found in DB: {article['title']}")
-                    continue
 
-        conn.commit()
-        print(f"Inserted {len(inserted_titles)} new articles")
 
-        # Update title tracker
-        if inserted_titles:
-            tracked_titles.update(inserted_titles)
-            with open(TRACKER_PATH, 'w', encoding='utf-8') as f:
-                json.dump(sorted(tracked_titles), f, indent=2)
-            print("Title tracker updated")
+login = 'https://energycharts.enerchase.de/'
 
-    except pyodbc.Error as e:
-        conn.rollback()
-        print(f"Database error: {str(e)}")
-    except Exception as e:
-        conn.rollback()
-        print(f"Unexpected error: {str(e)}")
-    finally:
-        if 'conn' in locals():
-            conn.close()
+config = "C:/Users/Z_LAME/Desktop/Crawler/news-crawler/Energy Quantified/config.json"
 
-def main():
-    """Main execution flow"""
-    # Load credentials and create session
-    form_data = load_config()
-    
-    with requests.Session() as session:
-        # Login
-        session.post('https://energycharts.enerchase.de/', data=form_data, verify=False)
-        
-        # Scrape articles
-        articles = scrape_articles(session)
-        
-        # Save to database and update tracker
-        if articles:
-            save_to_database(articles)
-        else:
-            print("No valid articles found")
+with open(config) as config_file:
+    config_data = json.load(config_file)
 
-if __name__ == "__main__":
-    main()
+form_data = {
+    'Email-4': config_data['Email-4'],
+    'Password-4': config_data['Password-4']
+}
+
+
+with requests.Session() as session:
+    post = session.post(login, data=form_data, verify=False)
+    request = 'https://energycharts.enerchase.de/energycharts/energycharts---co2-marktbericht'
+    t = session.get(request, verify = False)
+    html_content = t.text
+    soup = BeautifulSoup(html_content, 'lxml')
+
+
+main_div = soup.find_all('div', class_='co2_richttext w-richtext')
+timestamp = soup.find_all('div', class_='date marktbericht')
+h3 = soup.find_all('h3', class_='co2_heading')
+
+titles = []
+timestamps = []
+body = []
+
+for i in main_div:
+    body.append(i.text)
+
+for i in h3:
+    titles.append(i.text)
+
+for i in timestamp:
+    timestamps.append(i.text)
+
+date_format = '%Y-%m-%d %I:%M %p'
+
+dates = []
+
+for i in timestamps:
+    date = datetime.strptime(i, date_format)
+    dates.append(date)
+
+merged_data = []
+
+for i in range(len(titles)):
+    # Corrected 'timestpamps' to 'timestamps'
+    item = {
+        'title': titles[i],
+        'date': dates[i],  # Assuming 'timestamps' is the correct list name
+        'body': body[i]
+    }
+    merged_data.append(item)
+
+download_path = 'C:/Users/Z_LAME/Desktop/Crawler/Downloads/Energy Quantified/CO2'
+titles_tracker_path = os.path.join(download_path, 'titles_tracker.json')
+
+try:
+    with open(titles_tracker_path, 'r', encoding='utf-8') as file:
+        titles_tracker = set(json.load(file))
+except FileNotFoundError:
+    titles_tracker = set()
+
+for i, title in enumerate(titles):
+    if title not in titles_tracker:
+        titles_tracker.add(title)
+
+        article_data = {
+            'title': title,
+            'date': dates[i], 
+            'text': body[i]
+        }
+
+        filename = "".join([c for c in title if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+        filepath = os.path.join(download_path, f"{filename}.json")
+
+        with open(filepath, 'w', encoding='utf-8') as file:
+            json.dump(article_data, file, indent=4, default=str, ensure_ascii=False)
+            print(f"Saved article '{title}' to file: {filepath}")
+
+            cursor.execute(insert_sql, title, '', body[i], dates[i], 'CO2', 'Energy Quantified')
+            conn.commit()
+            print(f"Saved article '{title}' to database")
+
+
+with open(titles_tracker_path, 'w', encoding='utf-8') as file:
+    json.dump(list(titles_tracker), file, indent=4, default=str , ensure_ascii=False)
+
+
