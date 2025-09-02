@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -210,7 +212,8 @@ async def authenticate_user(page, context):
 
 async def main():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch(headless=False, executable_path = "C:/Users/Z_LAME/Desktop/Crawler/chrome-win/chrome.exe")
+
         context = await browser.new_context()
         page = await context.new_page()
         

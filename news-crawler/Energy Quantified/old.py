@@ -8,10 +8,6 @@ import json
 import urllib3
 import pyodbc
 
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
 DB_CONNECTION_STRING = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
     "SERVER=SQLBI01;"
@@ -98,11 +94,8 @@ try:
 except FileNotFoundError:
     titles_tracker = set()
 
-new_articles_found = False
-
 for i, title in enumerate(titles):
     if title not in titles_tracker:
-        new_articles_found = True
         titles_tracker.add(title)
 
         article_data = {
@@ -122,9 +115,8 @@ for i, title in enumerate(titles):
             conn.commit()
             print(f"Saved article '{title}' to database")
 
-if not new_articles_found:
-    print("No new articles found to insert.")
 
 with open(titles_tracker_path, 'w', encoding='utf-8') as file:
     json.dump(list(titles_tracker), file, indent=4, default=str , ensure_ascii=False)
+
 

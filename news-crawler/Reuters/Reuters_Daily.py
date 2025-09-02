@@ -15,7 +15,9 @@ headers = {
 }
 
 response = requests.get(api_url, headers=headers)
+
 response = response.json()
+
 
 keys_to_extract = [
     "articlesName",

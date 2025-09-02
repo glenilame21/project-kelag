@@ -4,7 +4,7 @@ This project is a web scraper for Montel News built with [Playwright](https://pl
 
 ## File Structure
 
-- **[Montel_Scraper_PlayWright.py](news-crawler/Montel/Montel_Scraper_PlayWright.py)**: Main Python script containing the scraping logic.
+- **[Montel_Scraper_PlayWright.py](Montel/Montel_Scraper_PlayWright.py)**: Main Python script containing the scraping logic.
 - **.env**: Environment file containing sensitive data such as credentials, cookie file path, and download directory.
 - **urls.json**: JSON file (located in the same directory as the script) containing the list of section URLs to scrape.
 
@@ -23,26 +23,59 @@ This project is a web scraper for Montel News built with [Playwright](https://pl
 
    ```sh
    pip install playwright pandas pyodbc python-dotenv
+   playwright install
+   ```
 
+2. **Prepare the .env file:**
 
+   Create a `.env` file in the `Montel/` directory with the following variables:
 
+   ```
+   MONTEL_USERNAME=your_username
+   PASSWORD=your_password
+   COOKIE_FILE=path/to/your/cookie_file.json
+   DOWNLOAD_DIR=your/download/directory
+   ```
 
-## Prepare the .env file:
+3. **Prepare the URLs file:**
 
-### Create a .env file in the project directory with the following variables:
+   The scraper expects a JSON file containing URLs at:
 
+   ```
+   Montel/urls.json
+   ```
 
-* MONTEL_USERNAME=your_username
-* PASSWORD=your_password
-* COOKIE_FILE=path/to/your/cookie_file.json
-* DOWNLOAD_DIR=your/download/directory
+   Example format:
 
+   ```json
+   {
+     "urls": [
+       "https://montelnews.com/news/section1",
+       "https://montelnews.com/news/section2"
+     ]
+   }
+   ```
 
-Ensure the urls.json file exists:
+## Usage
 
-The scraper expects a JSON file containing URLs at:
+Run the scraper with:
 
-C:/Users/Z_LAME/Desktop/Crawler/news-crawler/Montel/urls.json
+```sh
+python Montel/Montel_Scraper_PlayWright.py
+```
 
-You will have this in GitHub, replace it with your directory
+The script will:
+- Authenticate to Montel News using Playwright and credentials from `.env`
+- Scrape articles from the URLs in `urls.json`
+- Save each article as a JSON file in the download directory
+- Insert new articles into the SQL Server database, avoiding duplicates
 
+## Notes
+
+- Make sure your SQL Server is accessible and the `mercurius.DT_SCRAPER` table exists.
+- The script uses cookies for authentication; ensure the cookie file path is correct.
+- Duplicate articles are avoided by tracking titles in a local JSON file.
+
+## License
+
+Internal use only. Please ensure compliance with your organization's data and API policies.
